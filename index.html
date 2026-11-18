@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7f5">
+  <meta name="description" content="Không gian ghi chú cá nhân, lưu ngay trong trình duyệt của bạn.">
+  <title>Note Hub — Ghi chú của bạn</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172925;
+      --ink-soft: #40534e;
+      --muted: #71817b;
+      --line: #e4eae6;
+      --surface: #fff;
+      --canvas: #f4f7f5;
+      --teal: #176c5c;
+      --teal-dark: #104d43;
+      --teal-pale: #e5f2ed;
+      --gold: #d7a65d;
+      --shadow: 0 10px 28px rgba(23, 41, 37, .055);
+      --sans: "Aptos", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+      --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); font-family: var(--sans); font-size: 14px; }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, [contenteditable="true"]:focus-visible {
+      outline: 3px solid #73b6a4; outline-offset: 2px;
+    }
+    .app { min-height: 100vh; display: grid; grid-template-rows: 62px minmax(0, 1fr); }
+    .topbar {
+      display: flex; align-items: center; gap: 20px; padding: 0 24px; background: #fff;
+      border-bottom: 1px solid var(--line); position: relative; z-index: 4;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; width: 224px; flex: 0 0 224px; }
+    .brand-mark { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; background: var(--teal); color: white; }
+    .brand-mark svg { width: 19px; height: 19px; }
+    .brand-name { font-weight: 700; font-size: 15px; letter-spacing: -.25px; }
+    .brand-caption { color: var(--muted); font-size: 11px; margin-top: 1px; }
+    .top-actions { display: flex; align-items: center; gap: 12px; flex: 1; }
+    .search-wrap { position: relative; width: min(440px, 52vw); }
+    .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #788981; width: 16px; height: 16px; pointer-events: none; }
+    .search { width: 100%; height: 38px; padding: 0 50px 0 39px; border: 1px solid #e3e9e5; border-radius: 8px; background: #f8faf8; color: var(--ink); outline: none; }
+    .search:focus { background: #fff; border-color: #9bc7b9; box-shadow: 0 0 0 3px rgba(23,108,92,.08); }
+    .search-kbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #829089; font-size: 10px; border: 1px solid #dfe6e1; border-radius: 4px; padding: 2px 5px; }
+    .top-spacer { flex: 1; }
+    .save-status { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .save-dot { width: 7px; height: 7px; border-radius: 50%; background: #6ea88d; }
+    .top-button, .icon-button, .subtle-button, .primary-button {
+      border: 0; cursor: pointer; transition: background .16s ease, color .16s ease, border-color .16s ease;
+    }
+    .top-button { background: transparent; color: var(--ink-soft); border-radius: 7px; min-height: 36px; padding: 0 10px; display: inline-flex; align-items: center; gap: 8px; }
+    .top-button:hover, .icon-button:hover { background: #edf3ef; }
+    .top-button svg, .icon-button svg, .subtle-button svg, .primary-button svg { width: 16px; height: 16px; }
+    .avatar { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 50%; background: #e8eee9; color: #52665e; font-weight: 650; font-size: 11px; }
+    .workspace { min-height: 0; display: grid; grid-template-columns: 238px 286px minmax(0, 1fr); }
+    .sidebar { min-height: 0; background: #edf2ef; border-right: 1px solid #dfe7e2; display: flex; flex-direction: column; }
+    .sidebar-top { padding: 20px 15px 13px; }
+    .eyebrow { color: #7c8b83; text-transform: uppercase; letter-spacing: .09em; font-size: 10px; font-weight: 700; padding: 0 10px; }
+    .notebook-picker { display: flex; width: 100%; margin-top: 11px; border: 1px solid #dce5df; border-radius: 9px; background: #fff; padding: 10px; align-items: center; gap: 10px; text-align: left; cursor: pointer; }
+    .notebook-icon { width: 29px; height: 31px; flex: 0 0 29px; background: #e2eee8; border-radius: 5px; color: var(--teal); display: grid; place-items: center; }
+    .notebook-icon svg { width: 17px; height: 17px; }
+    .notebook-info { min-width: 0; flex: 1; }
+    .notebook-name { display: block; font-weight: 650; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .notebook-meta { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .chevrons { color: #82918a; width: 15px; height: 15px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 8px 20px; }
+    .section-head .eyebrow { padding: 0; }
+    .mini-add { border: 0; width: 27px; height: 27px; border-radius: 6px; background: transparent; color: #73827b; cursor: pointer; display: grid; place-items: center; }
+    .mini-add:hover { background: #dce8e1; color: var(--teal-dark); }
+    .mini-add svg { width: 15px; height: 15px; }
+    .section-list { overflow: auto; padding: 0 10px 12px; }
+    .section-row { position: relative; border: 0; width: 100%; min-height: 38px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: 7px; background: transparent; color: #50615a; cursor: pointer; text-align: left; font-size: 12px; }
+    .section-row:hover { background: #e2ebe5; }
+    .section-row[aria-current="true"] { background: #fff; color: var(--teal-dark); font-weight: 650; box-shadow: 0 1px 2px rgba(27,60,48,.04); }
+    .section-bar { width: 3px; height: 17px; border-radius: 3px; flex: 0 0 3px; background: var(--section-color, #7cae9e); }
+    .section-count { margin-left: auto; color: #84918b; font-size: 10px; }
+    .sidebar-bottom { margin-top: auto; padding: 12px 14px; border-top: 1px solid #dde5e0; }
+    .storage-note { display: flex; gap: 9px; align-items: flex-start; padding: 10px; border-radius: 8px; background: rgba(255,255,255,.58); color: #6d7d74; font-size: 10px; line-height: 1.45; }
+    .storage-note svg { width: 15px; height: 15px; flex: 0 0 15px; margin-top: 1px; color: var(--teal); }
+    .storage-note strong { color: #43584d; font-weight: 650; }
+    .page-panel { min-height: 0; background: #f8faf8; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+    .page-panel-head { padding: 23px 18px 12px; }
+    .panel-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .panel-title { font-size: 17px; font-weight: 680; letter-spacing: -.4px; margin: 0; }
+    .panel-actions { display: flex; gap: 4px; }
+    .icon-button { width: 31px; height: 31px; border-radius: 7px; color: #73817b; background: transparent; display: grid; place-items: center; }
+    .section-caption { color: var(--muted); font-size: 11px; margin-top: 5px; }
+    .new-page { margin-top: 15px; width: 100%; justify-content: center; }
+    .primary-button { min-height: 37px; border-radius: 7px; padding: 0 13px; color: #fff; background: var(--teal); display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 620; font-size: 12px; }
+    .primary-button:hover { background: var(--teal-dark); }
+    .page-list { min-height: 0; flex: 1; overflow: auto; padding: 0 12px 18px; }
+    .list-label { padding: 9px 9px 7px; color: #819087; text-transform: uppercase; font-size: 9px; font-weight: 700; letter-spacing: .09em; }
+    .page-row { width: 100%; text-align: left; display: block; border: 1px solid transparent; border-radius: 8px; padding: 11px 11px 10px; margin: 3px 0; background: transparent; cursor: pointer; }
+    .page-row:hover { background: #eff4f0; }
+    .page-row[aria-current="true"] { background: #fff; border-color: #e4ebe6; box-shadow: 0 2px 7px rgba(23,41,37,.045); }
+    .page-row-title { display: flex; align-items: center; gap: 7px; color: #34473f; font-size: 12px; line-height: 1.35; font-weight: 620; }
+    .page-row[aria-current="true"] .page-row-title { color: var(--teal-dark); }
+    .page-row-snippet { color: #7b8982; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 10px; line-height: 1.5; margin-top: 5px; }
+    .page-row-date { margin-top: 7px; color: #9aa49f; font-size: 9px; }
+    .tag-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #d4a451; }
+    .empty-list { padding: 18px 12px; color: #7c8b83; line-height: 1.5; font-size: 11px; text-align: center; }
+    .editor-pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: #fff; }
+    .editor-top { min-height: 60px; padding: 0 34px; border-bottom: 1px solid #edf0ed; display: flex; align-items: center; gap: 16px; }
+    .breadcrumbs { min-width: 0; display: flex; align-items: center; gap: 8px; color: #88958e; font-size: 11px; white-space: nowrap; overflow: hidden; }
+    .breadcrumbs span { overflow: hidden; text-overflow: ellipsis; }
+    .crumb-current { color: #54655d; font-weight: 600; }
+    .editor-top-actions { margin-left: auto; display: flex; align-items: center; gap: 5px; }
+    .subtle-button { min-height: 32px; padding: 0 9px; border-radius: 6px; background: transparent; color: #65756d; display: inline-flex; align-items: center; gap: 7px; font-size: 11px; }
+    .subtle-button:hover, .subtle-button[aria-pressed="true"] { background: #edf5f0; color: var(--teal-dark); }
+    .editor-scroll { min-height: 0; flex: 1; overflow: auto; }
+    .note { width: min(790px, 100%); margin: 0 auto; padding: 48px 56px 96px; }
+    .note-meta { display: flex; align-items: center; gap: 9px; color: #829088; font-size: 10px; }
+    .note-date { color: #829088; }
+    .note-separator { width: 3px; height: 3px; border-radius: 50%; background: #b8c2bc; }
+    .tag-label { color: #8a672a; background: #fbf3df; border-radius: 4px; padding: 3px 6px; font-weight: 600; }
+    .title-input { display: block; width: 100%; border: 0; outline: 0; color: #19352e; background: transparent; resize: none; margin: 16px 0 20px; padding: 0; font-family: var(--serif); font-size: clamp(29px, 3vw, 38px); font-weight: 600; letter-spacing: -.8px; line-height: 1.2; }
+    .title-input::placeholder { color: #aab5ae; }
+    .formatbar { position: sticky; top: 0; z-index: 2; height: 45px; display: flex; align-items: center; gap: 3px; padding: 0 0 12px; background: #fff; border-bottom: 1px solid #edf0ed; }
+    .format-button { min-width: 29px; height: 28px; padding: 0 7px; display: inline-flex; justify-content: center; align-items: center; border: 0; border-radius: 5px; color: #52645b; background: transparent; cursor: pointer; font-size: 12px; }
+    .format-button:hover, .format-button:focus-visible { background: #edf3ef; }
+    .format-button svg { width: 15px; height: 15px; }
+    .format-divider { width: 1px; height: 17px; background: #e6ebe7; margin: 0 5px; }
+    .editor { min-height: 330px; padding: 23px 0; color: #354b42; font-family: var(--serif); font-size: 16px; line-height: 1.82; overflow-wrap: anywhere; }
+    .editor:empty::before { content: attr(data-placeholder); color: #adb8b1; pointer-events: none; }
+    .editor p { margin: 0 0 14px; }
+    .editor h2 { font-family: var(--sans); font-size: 17px; line-height: 1.4; color: #27483d; margin: 27px 0 9px; }
+    .editor blockquote { margin: 20px 0; padding: 3px 0 3px 16px; border-left: 3px solid #8db9a8; color: #64766d; }
+    .editor ul, .editor ol { padding-left: 23px; margin: 0 0 15px; }
+    .editor li { padding-left: 4px; }
+    .editor mark { background: #fff0bd; color: inherit; }
+    .editor a { color: #176c5c; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    .editor-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #edf0ed; padding-top: 12px; color: #9aa59f; font-size: 10px; }
+    .footer-hint { display: flex; align-items: center; gap: 6px; }
+    .footer-hint svg { width: 13px; height: 13px; }
+    .empty-editor { height: 100%; display: grid; place-items: center; padding: 30px; }
+    .empty-card { text-align: center; max-width: 330px; }
+    .empty-illustration { width: 56px; height: 56px; display: grid; place-items: center; margin: 0 auto 18px; border: 1px solid #deebe4; border-radius: 17px; color: var(--teal); background: #f1f7f3; }
+    .empty-illustration svg { width: 25px; height: 25px; }
+    .empty-card h2 { font-family: var(--serif); font-size: 23px; margin: 0 0 8px; font-weight: 600; }
+    .empty-card p { color: #7d8b84; line-height: 1.6; font-size: 12px; margin: 0 0 17px; }
+    .mobile-menu { display: none; }
+    .toast { position: fixed; z-index: 10; left: 50%; bottom: 24px; transform: translate(-50%, 14px); opacity: 0; pointer-events: none; padding: 10px 14px; border-radius: 8px; color: white; background: #263d35; box-shadow: var(--shadow); font-size: 12px; transition: opacity .18s ease, transform .18s ease; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 1050px) {
+      .workspace { grid-template-columns: 210px 260px minmax(0,1fr); }
+      .brand { width: 196px; flex-basis: 196px; }
+      .note { padding-left: 38px; padding-right: 38px; }
+      .editor-top { padding-left: 25px; padding-right: 25px; }
+    }
+    @media (max-width: 760px) {
+      .app { grid-template-rows: 56px minmax(0,1fr); }
+      .topbar { padding: 0 13px; gap: 10px; }
+      .brand { width: auto; flex: 0 0 auto; }
+      .brand-caption, .save-status, .top-button-label, .search-kbd { display: none; }
+      .top-actions { justify-content: flex-end; gap: 4px; }
+      .search-wrap { width: min(48vw, 280px); }
+      .search { height: 35px; }
+      .workspace { display: block; position: relative; overflow: hidden; }
+      .sidebar, .page-panel, .editor-pane { position: absolute; inset: 0; transition: transform .22s ease; }
+      .sidebar { z-index: 3; width: min(290px, 84vw); box-shadow: 12px 0 26px rgba(26,49,39,.08); transform: translateX(-105%); }
+      .workspace.nav-open .sidebar { transform: translateX(0); }
+      .page-panel { z-index: 2; width: min(340px, 90vw); transform: translateX(-105%); }
+      .workspace.pages-open .page-panel { transform: translateX(0); box-shadow: 12px 0 26px rgba(26,49,39,.08); }
+      .editor-pane { z-index: 1; }
+      .mobile-menu { display: inline-grid; place-items: center; border: 0; width: 34px; height: 34px; border-radius: 7px; background: transparent; color: #68776f; cursor: pointer; }
+      .mobile-menu:hover { background: #edf3ef; }
+      .mobile-menu svg { width: 17px; height: 17px; }
+      .editor-top { min-height: 52px; padding: 0 13px; gap: 7px; }
+      .editor-top .subtle-button span { display: none; }
+      .breadcrumbs { font-size: 10px; }
+      .note { padding: 32px 23px 72px; }
+      .title-input { font-size: 31px; }
+    }
+    @media (max-width: 420px) {
+      .brand-name { display: none; }
+      .topbar { gap: 6px; }
+      .search-wrap { width: min(55vw, 240px); }
+      .avatar { display: none; }
+      .top-button { padding: 0 7px; }
+      .note { padding-left: 18px; padding-right: 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <button class="mobile-menu" id="mobileNav" aria-label="Mở danh sách sổ tay" title="Sổ tay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <div class="brand" aria-label="Note Hub">
+        <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.75h12A1.25 1.25 0 0 1 19.25 6v12A1.25 1.25 0 0 1 18 19.25H6A1.25 1.25 0 0 1 4.75 18V6A1.25 1.25 0 0 1 6 4.75Z"/><path d="M8.5 8.25h7M8.5 11.75h7M8.5 15.25h4"/></svg></div>
+        <div><div class="brand-name">Note Hub</div><div class="brand-caption">Ý tưởng của bạn, ở một nơi</div></div>
+      </div>
+      <div class="top-actions">
+        <label class="search-wrap"><span class="sr-only">Tìm trong ghi chú</span><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.2 4.2"/></svg><input class="search" id="search" type="search" placeholder="Tìm trong ghi chú…" autocomplete="off"><span class="search-kbd">⌘ K</span></label>
+        <div class="top-spacer"></div>
+        <div class="save-status" id="saveStatus" role="status" aria-live="polite"><span class="save-dot"></span><span>Đã lưu trên thiết bị</span></div>
+        <button class="top-button" id="newNotebook" title="Tạo sổ tay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.75h12A1.25 1.25 0 0 1 19.25 6v12A1.25 1.25 0 0 1 18 19.25H6A1.25 1.25 0 0 1 4.75 18V6A1.25 1.25 0 0 1 6 4.75Z"/><path d="M12 8v8M8 12h8"/></svg><span class="top-button-label">Sổ tay mới</span></button>
+        <div class="avatar" aria-hidden="true">NH</div>
+      </div>
+    </header>
+    <main class="workspace" id="workspace">
+      <aside class="sidebar" aria-label="Điều hướng sổ tay">
+        <div class="sidebar-top"><div class="eyebrow">Không gian làm việc</div><button class="notebook-picker" id="notebookPicker" aria-label="Chọn sổ tay"><span class="notebook-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M6.25 4.75h11.5A1.5 1.5 0 0 1 19.25 6.25v11.5a1.5 1.5 0 0 1-1.5 1.5H6.25a1.5 1.5 0 0 1-1.5-1.5V6.25a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M8 4.75v14.5M10.5 8h5M10.5 11.5h5M10.5 15h3.25"/></svg></span><span class="notebook-info"><span class="notebook-name" id="notebookName">Sổ tay cá nhân</span><span class="notebook-meta" id="notebookMeta">1 section</span></span><svg class="chevrons" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 10 4-4 4 4M8 14l4 4 4-4"/></svg></button></div>
+        <div class="section-head"><span class="eyebrow">Sections</span><button class="mini-add" id="newSection" aria-label="Thêm section" title="Thêm section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <nav class="section-list" id="sectionList" aria-label="Sections"></nav>
+        <div class="sidebar-bottom"><div class="storage-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2"/></svg><span><strong>Lưu riêng tư trên thiết bị này.</strong><br>Ghi chú chưa được đồng bộ lên đám mây.</span></div></div>
+      </aside>
+      <section class="page-panel" aria-label="Danh sách trang">
+        <div class="page-panel-head"><div class="panel-title-row"><h1 class="panel-title" id="sectionTitle">Ghi chú nhanh</h1><div class="panel-actions"><button class="icon-button" id="sortPages" title="Đổi thứ tự trang" aria-label="Đổi thứ tự trang"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 5v14M4.5 8.5 8 5l3.5 3.5M16 19V5m-3.5 3.5L16 5l3.5 3.5"/></svg></button></div></div><div class="section-caption" id="sectionCaption">0 trang</div><button class="primary-button new-page" id="newPage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Tạo trang mới</button></div>
+        <div class="page-list" id="pageList" role="list"></div>
+      </section>
+      <section class="editor-pane" aria-label="Trình soạn thảo ghi chú" id="editorPane"></section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    (() => {
+      const KEY = 'note-hub.data.v1';
+      const COLORS = ['#6eaa98', '#d5a85f', '#8c9fc4', '#d98775', '#9c8db7', '#74a5ad'];
+      const icons = {
+        file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.75h7l4 4V19a1.25 1.25 0 0 1-1.25 1.25h-9.5A1.25 1.25 0 0 1 6 19V6a1.25 1.25 0 0 1 1-1.25Z"/><path d="M14 5v4h4M9 13h6M9 16.5h6"/></svg>',
+        pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m15.5 5.5 3 3M4.75 19.25l4.7-1 9.3-9.3a2.1 2.1 0 0 0-3-3l-9.3 9.3-1.7 4Z"/><path d="M4.75 19.25H20"/></svg>',
+        lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2"/></svg>',
+        check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.1 4.1L19 6.8"/></svg>'
+      };
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+      const id = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const now = () => new Date().toISOString();
+      const sample = () => {
+        const notebookId = id(), sectionId = id(), pageId = id();
+        return { version: 1, notebooks: [{ id: notebookId, name: 'Sổ tay cá nhân', sections: [{ id: sectionId, name: 'Ghi chú nhanh', color: COLORS[0], pages: [{ id: pageId, title: 'Chào mừng đến Note Hub', html: '<p>Một nơi yên tĩnh để gom những điều bạn muốn nhớ.</p><h2>Bắt đầu thật đơn giản</h2><ul><li>Tạo một trang mới cho ý tưởng tiếp theo.</li><li>Dùng thanh công cụ để định dạng và đánh dấu việc cần làm.</li><li>Tìm lại ghi chú bằng ô tìm kiếm phía trên.</li></ul><blockquote>Mọi ghi chú được lưu trong trình duyệt trên thiết bị này.</blockquote>', tag: '', createdAt: now(), updatedAt: now() }] }] }] };
+      };
+      let state;
+      try { const parsed = JSON.parse(localStorage.getItem(KEY)); state = parsed && parsed.version === 1 && Array.isArray(parsed.notebooks) ? parsed : sample(); }
+      catch { state = sample(); }
+      if (!state.notebooks.length) state = sample();
+      let activeNotebookId = state.notebooks[0].id;
+      let activeSectionId = state.notebooks[0].sections[0]?.id || null;
+      let activePageId = state.notebooks[0].sections[0]?.pages[0]?.id || null;
+      let searchTerm = '', sortedNewest = true, saveTimer, toastTimer;
+      const textFromHTML = html => { const el = document.createElement('div'); el.innerHTML = sanitizeHTML(html); return (el.textContent || '').replace(/\s+/g, ' ').trim(); };
+      function sanitizeHTML(html) {
+        const allowed = new Set(['P','BR','STRONG','B','EM','I','U','S','DEL','UL','OL','LI','H2','H3','BLOCKQUOTE','MARK','A']);
+        const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
+        const clean = node => {
+          [...node.childNodes].forEach(child => {
+            if (child.nodeType === Node.COMMENT_NODE) { child.remove(); return; }
+            if (child.nodeType !== Node.ELEMENT_NODE) return;
+            if (!allowed.has(child.tagName)) { clean(child); child.replaceWith(...child.childNodes); return; }
+            [...child.attributes].forEach(attr => {
+              if (child.tagName === 'A' && attr.name === 'href') {
+                try { const url = new URL(attr.value, location.href); if (!['http:','https:','mailto:'].includes(url.protocol)) child.removeAttribute(attr.name); else child.setAttribute('href', url.href); }
+                catch { child.removeAttribute(attr.name); }
+              } else if (child.tagName === 'A' && attr.name === 'target' && attr.value === '_blank') return;
+              else child.removeAttribute(attr.name);
+            });
+            if (child.tagName === 'A') { child.setAttribute('rel','noopener noreferrer'); child.setAttribute('target','_blank'); }
+            clean(child);
+          });
+        };
+        clean(doc.body);
+        return doc.body.innerHTML;
+      }
+      const currentNotebook = () => state.notebooks.find(n => n.id === activeNotebookId) || state.notebooks[0];
+      const currentSection = () => currentNotebook()?.sections.find(s => s.id === activeSectionId) || null;
+      const currentPage = () => currentSection()?.pages.find(p => p.id === activePageId) || null;
+      function save(immediate = false) {
+        clearTimeout(saveTimer);
+        const write = () => {
+          try { localStorage.setItem(KEY, JSON.stringify(state)); $('#saveStatus').innerHTML = `<span class="save-dot"></span><span>Đã lưu trên thiết bị</span>`; }
+          catch { $('#saveStatus').innerHTML = `<span class="save-dot" style="background:#c47462"></span><span>Không thể lưu</span>`; toast('Bộ nhớ trình duyệt đã đầy. Hãy xuất bớt ghi chú.'); }
+        };
+        $('#saveStatus').innerHTML = `<span class="save-dot" style="background:#d2a454"></span><span>Đang lưu…</span>`;
+        if (immediate) write(); else saveTimer = setTimeout(write, 280);
+      }
+      function showToast(message) { const toast = $('#toast'); toast.textContent = message; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 2400); }
+      function dateLabel(iso) { const date = new Date(iso); if (Number.isNaN(date.getTime())) return ''; return new Intl.DateTimeFormat('vi-VN',{day:'numeric',month:'short'}).format(date); }
+      function countPages(notebook) { return notebook.sections.reduce((sum, section) => sum + section.pages.length, 0); }
+      function renderSections() {
+        const notebook = currentNotebook();
+        $('#notebookName').textContent = notebook.name;
+        $('#notebookMeta').textContent = `${notebook.sections.length} section${notebook.sections.length === 1 ? '' : 's'}`;
+        $('#sectionList').innerHTML = notebook.sections.map((section, index) => `<button class="section-row" type="button" data-section="${escapeHTML(section.id)}" aria-current="${section.id === activeSectionId}" style="--section-color:${escapeHTML(section.color || COLORS[index % COLORS.length])}"><span class="section-bar"></span><span>${escapeHTML(section.name)}</span><span class="section-count">${section.pages.length}</span></button>`).join('') || '<div class="empty-list">Chưa có section nào.</div>';
+        $('#sectionTitle').textContent = currentSection()?.name || 'Chưa có section';
+        $('#sectionCaption').textContent = `${currentSection()?.pages.length || 0} trang`;
+      }
+      function pageMatches(page) { if (!searchTerm) return true; const needle = searchTerm.toLocaleLowerCase('vi'); return `${page.title} ${textFromHTML(page.html)}`.toLocaleLowerCase('vi').includes(needle); }
+      function renderPages() {
+        const section = currentSection();
+        const list = $('#pageList');
+        if (!section) { list.innerHTML = '<div class="empty-list">Tạo một section để bắt đầu ghi chú.</div>'; return; }
+        const candidates = searchTerm
+          ? currentNotebook().sections.flatMap(ownerSection => ownerSection.pages.map(page => ({ page, section: ownerSection })))
+          : section.pages.map(page => ({ page, section }));
+        const matches = candidates.filter(({ page }) => pageMatches(page)).sort((a,b) => sortedNewest ? b.page.updatedAt.localeCompare(a.page.updatedAt) : a.page.updatedAt.localeCompare(b.page.updatedAt));
+        $('#sectionCaption').textContent = searchTerm ? `${matches.length} kết quả trong sổ tay` : `${section.pages.length} trang`;
+        list.innerHTML = matches.length ? `<div class="list-label">${searchTerm ? 'Kết quả trong sổ tay' : 'Gần đây'}</div>` + matches.map(({ page, section: ownerSection }) => `<button class="page-row" type="button" role="listitem" data-section="${escapeHTML(ownerSection.id)}" data-page="${escapeHTML(page.id)}" aria-current="${page.id === activePageId}"><span class="page-row-title">${page.tag ? '<span class="tag-dot" aria-label="Có tag"></span>' : ''}${escapeHTML(page.title || 'Trang chưa đặt tên')}</span><span class="page-row-snippet">${escapeHTML(textFromHTML(page.html) || 'Chưa có nội dung')}</span><span class="page-row-date">${searchTerm ? `${escapeHTML(ownerSection.name)} · ` : ''}${dateLabel(page.updatedAt)}</span></button>`).join('') : `<div class="empty-list">${searchTerm ? 'Không tìm thấy ghi chú phù hợp.' : 'Section này chưa có trang nào.'}</div>`;
+      }
+      function renderEditor() {
+        const page = currentPage();
+        const pane = $('#editorPane');
+        if (!page) {
+          pane.innerHTML = `<div class="empty-editor"><div class="empty-card"><div class="empty-illustration">${icons.file}</div><h2>${currentSection() ? 'Một trang giấy mới' : 'Chọn một section'}</h2><p>${currentSection() ? 'Tạo trang để bắt đầu lưu ý tưởng, kế hoạch và những điều đáng nhớ.' : 'Thêm section đầu tiên để sắp xếp các trang ghi chú.'}</p>${currentSection() ? '<button class="primary-button" id="emptyNewPage">Tạo trang mới</button>' : ''}</div></div>`;
+          $('#emptyNewPage')?.addEventListener('click', createPage);
+          return;
+        }
+        const section = currentSection();
+        const notebook = currentNotebook();
+        pane.innerHTML = `<div class="editor-top"><div class="breadcrumbs"><span>${escapeHTML(notebook.name)}</span><span aria-hidden="true">/</span><span>${escapeHTML(section.name)}</span><span aria-hidden="true">/</span><span class="crumb-current">${escapeHTML(page.title || 'Trang chưa đặt tên')}</span></div><div class="editor-top-actions"><button class="subtle-button" id="toggleTag" aria-pressed="${page.tag === 'important'}" title="Đánh dấu quan trọng"><span>Đánh dấu quan trọng</span></button></div></div><div class="editor-scroll"><article class="note"><div class="note-meta"><span class="note-date">${dateLabel(page.updatedAt)}</span><span class="note-separator"></span><span>${page.tag ? '<span class="tag-label">Quan trọng</span>' : 'Chỉ mình bạn thấy ghi chú này'}</span></div><label for="pageTitle" class="sr-only">Tiêu đề trang</label><textarea class="title-input" id="pageTitle" rows="1" placeholder="Tiêu đề trang" spellcheck="true">${escapeHTML(page.title)}</textarea><div class="formatbar" role="toolbar" aria-label="Định dạng văn bản"><button class="format-button" type="button" data-command="bold" aria-label="In đậm" title="In đậm"><strong>B</strong></button><button class="format-button" type="button" data-command="italic" aria-label="In nghiêng" title="In nghiêng"><em>I</em></button><button class="format-button" type="button" data-command="underline" aria-label="Gạch chân" title="Gạch chân"><u>U</u></button><span class="format-divider"></span><button class="format-button" type="button" data-command="insertUnorderedList" aria-label="Danh sách dấu đầu dòng" title="Danh sách dấu đầu dòng">• —</button><button class="format-button" type="button" data-command="insertOrderedList" aria-label="Danh sách đánh số" title="Danh sách đánh số">1.</button><button class="format-button" type="button" data-command="formatBlock" data-value="h2" aria-label="Tiêu đề phụ" title="Tiêu đề phụ">H₂</button><button class="format-button" type="button" data-command="formatBlock" data-value="blockquote" aria-label="Trích dẫn" title="Trích dẫn">“ ”</button><span class="format-divider"></span><button class="format-button" type="button" data-command="hiliteColor" data-value="#fff0bd" aria-label="Tô sáng" title="Tô sáng">▰</button><button class="format-button" type="button" id="taskButton" aria-label="Chèn việc cần làm" title="Chèn việc cần làm">☐</button></div><div class="editor" id="noteEditor" contenteditable="true" role="textbox" aria-label="Nội dung ghi chú" aria-multiline="true" data-placeholder="Bắt đầu viết…"></div><div class="editor-footer"><span class="footer-hint">${icons.lock}<span>Lưu tự động · Chỉ trên thiết bị này</span></span><span id="wordCount">0 từ</span></div></article></div>`;
+        const editor = $('#noteEditor');
+        editor.innerHTML = sanitizeHTML(page.html);
+        const title = $('#pageTitle');
+        const resize = () => { title.style.height = 'auto'; title.style.height = `${title.scrollHeight}px`; };
+        resize(); title.addEventListener('input', () => { resize(); page.title = title.value; page.updatedAt = now(); save(); renderSections(); renderPages(); updateWordCount(); });
+        editor.addEventListener('input', () => { page.html = sanitizeHTML(editor.innerHTML); page.updatedAt = now(); save(); renderSections(); renderPages(); updateWordCount(); });
+        $('#toggleTag').addEventListener('click', event => { page.tag = page.tag ? '' : 'important'; page.updatedAt = now(); renderEditor(); renderPages(); save(true); showToast(page.tag ? 'Đã đánh dấu quan trọng' : 'Đã bỏ đánh dấu'); });
+        $('.formatbar').addEventListener('mousedown', event => { if (event.target.closest('button')) event.preventDefault(); });
+        $('.formatbar').addEventListener('click', event => { const button = event.target.closest('[data-command]'); if (!button) return; editor.focus(); document.execCommand(button.dataset.command, false, button.dataset.value || null); page.html = sanitizeHTML(editor.innerHTML); page.updatedAt = now(); save(); updateWordCount(); });
+        $('#taskButton').addEventListener('click', () => { editor.focus(); document.execCommand('insertText', false, '☐ '); page.html = sanitizeHTML(editor.innerHTML); page.updatedAt = now(); save(); updateWordCount(); });
+        updateWordCount();
+      }
+      function updateWordCount() { const editor = $('#noteEditor'); if (!editor) return; const text = (editor.innerText || '').trim(); const words = text ? text.split(/\s+/).length : 0; $('#wordCount').textContent = `${words} từ`; }
+      function render() { renderSections(); renderPages(); renderEditor(); }
+      function createPage() {
+        const section = currentSection(); if (!section) { showToast('Hãy tạo section trước.'); return; }
+        const page = { id: id(), title: '', html: '', tag: '', createdAt: now(), updatedAt: now() };
+        section.pages.unshift(page); activePageId = page.id; searchTerm = ''; $('#search').value = ''; render(); save(true); $('#pageTitle')?.focus(); closeMobilePanels();
+      }
+      function createSection() {
+        const name = window.prompt('Tên section mới'); if (!name?.trim()) return;
+        const notebook = currentNotebook(); const section = { id: id(), name: name.trim(), color: COLORS[notebook.sections.length % COLORS.length], pages: [] };
+        notebook.sections.push(section); activeSectionId = section.id; activePageId = null; render(); save(true); showToast('Section đã được tạo.'); closeMobilePanels();
+      }
+      function createNotebook() {
+        const name = window.prompt('Tên sổ tay mới'); if (!name?.trim()) return;
+        const section = { id: id(), name: 'Ghi chú nhanh', color: COLORS[state.notebooks.length % COLORS.length], pages: [] };
+        const notebook = { id: id(), name: name.trim(), sections: [section] };
+        state.notebooks.push(notebook); activeNotebookId = notebook.id; activeSectionId = section.id; activePageId = null; render(); save(true); showToast('Sổ tay đã được tạo.'); closeMobilePanels();
+      }
+      function closeMobilePanels() { $('#workspace').classList.remove('nav-open','pages-open'); }
+      $('#sectionList').addEventListener('click', event => { const button = event.target.closest('[data-section]'); if (!button) return; activeSectionId = button.dataset.section; activePageId = currentSection()?.pages[0]?.id || null; render(); $('#workspace').classList.remove('nav-open'); });
+      $('#pageList').addEventListener('click', event => { const button = event.target.closest('[data-page]'); if (!button) return; if (button.dataset.section) activeSectionId = button.dataset.section; activePageId = button.dataset.page; render(); $('#workspace').classList.remove('pages-open'); });
+      $('#newPage').addEventListener('click', createPage);
+      $('#newSection').addEventListener('click', createSection);
+      $('#newNotebook').addEventListener('click', createNotebook);
+      $('#notebookPicker').addEventListener('click', () => { if (state.notebooks.length < 2) { showToast('Tạo sổ tay mới ở góc trên bên phải.'); return; } const names = state.notebooks.map((book, i) => `${i + 1}. ${book.name}`).join('\n'); const choice = Number(window.prompt(`Chọn sổ tay bằng số:\n${names}`, '1')) - 1; if (!Number.isInteger(choice) || !state.notebooks[choice]) return; activeNotebookId = state.notebooks[choice].id; activeSectionId = state.notebooks[choice].sections[0]?.id || null; activePageId = currentSection()?.pages[0]?.id || null; render(); });
+      $('#sortPages').addEventListener('click', () => { sortedNewest = !sortedNewest; renderPages(); showToast(sortedNewest ? 'Trang mới cập nhật trước.' : 'Trang cũ cập nhật trước.'); });
+      $('#search').addEventListener('input', event => { searchTerm = event.target.value.trim(); renderPages(); });
+      $('#search').addEventListener('keydown', event => { if (event.key === 'Escape') { event.target.value = ''; searchTerm = ''; renderPages(); event.target.blur(); } });
+      document.addEventListener('keydown', event => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); $('#search').focus(); } });
+      $('#mobileNav').addEventListener('click', () => { const workspace = $('#workspace'); if (workspace.classList.contains('nav-open')) workspace.classList.remove('nav-open'); else workspace.classList.add('nav-open'); });
+      $('#workspace').addEventListener('click', event => { if (event.target === event.currentTarget) closeMobilePanels(); });
+      render();
+    })();
+  </script>
+</body>
+</html>
